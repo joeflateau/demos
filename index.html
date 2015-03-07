@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Hello</title>
+		<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundation/5.5.1/css/foundation.css">
+	</head>
+	<body>
+		<div class="row">
+			<div class="medium-6 columns">
+				<ul data-bind="foreach: items">
+					<li data-bind="text: text, click: $root.removeItem"></li>
+				</ul>&nbsp;
+			</div>
+			<div class="medium-5 columns">
+				<input type="text" data-bind="value: text, valueUpdate: 'afterkeyup'">
+			</div>
+			<div class="medium-1 columns">
+				<button class="postfix" data-bind="click: pushItem">+</button>
+			</div>
+		</div>
+		
+		<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.3.0/knockout-min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			function ViewModel(){
+				var vm = this;
+				var socket = io();
+
+				this.text = ko.observable();
+				this.items = ko.observableArray([]);
+
+				vm.pushItem = function(){
+					var item = { 
+						id: new Date().getTime() + "" + Math.random(),
+						text: vm.text()
+					};
+					vm.items.push(item);
+					vm.text("");
+					socket.emit('push', item)
+				}
+				vm.removeItem = function(item){
+					vm.items.remove(item);
+					socket.emit('remove', item);
+				}
+				socket.on('todos', function(items) { vm.items(items); });
+				socket.on('push', function(item) { vm.items.push(item); });
+				socket.on('remove', function(item) { 
+					vm.items.remove(function(item2){ return item2.id === item.id; });
+				});
+
+			}
+
+			ko.applyBindings(new ViewModel());
+		</script>
+	</body>
+</html>
