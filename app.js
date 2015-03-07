@@ -26,6 +26,14 @@ io.on('connection', function(socket){
 		todos = todos.filter(function(item2) { return item2.id !== item.id; });
 		socket.broadcast.emit('remove', item);
 	});
+
+	socket.on('line', function(line){
+		socket.broadcast.emit('line', line);
+	});
+
+	socket.on('clear', function(){
+		socket.broadcast.emit('clear');
+	});
 });
 
 http.listen(3000, function(){

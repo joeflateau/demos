@@ -6,16 +6,26 @@
 	</head>
 	<body>
 		<div class="row">
-			<div class="medium-6 columns">
-				<ul data-bind="foreach: items">
-					<li data-bind="text: text, click: $root.removeItem"></li>
-				</ul>&nbsp;
+			<div class="medium-3 medium-centered columns panel">
+				<div data-bind="foreach: items">
+					<div class="row">
+						<div class="small-8 columns">
+							<span data-bind="text: text"></span>
+						</div>
+						<div class="small-4 columns">
+							<button class="tiny alert round" data-bind="click: $root.removeItem">&times;</button>
+						</div>
+					</div>						
+				</div>&nbsp;
 			</div>
-			<div class="medium-5 columns">
+			<div class="medium-3 medium-centered columns">
 				<input type="text" data-bind="value: text, valueUpdate: 'afterkeyup'">
 			</div>
-			<div class="medium-1 columns">
+			<div class="medium-2 medium-centered columns">
 				<button class="postfix" data-bind="click: pushItem">+</button>
+			</div>
+			<div class="medium-5 medium-centered columns panel">
+				<canvas id="whiteboard" width="640" height="480" data-bind="whiteboard: socket"></canvas>
 			</div>
 		</div>
 		
@@ -23,9 +33,57 @@
 		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.3.0/knockout-min.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
 		<script>
+			ko.bindingHandlers.whiteboard = {
+				init: function(el, valueAccessor) {
+					var socket = valueAccessor();
+
+					function draw(x1, y1, x2, y2) {
+						var context = el.getContext('2d');
+						context.beginPath();
+						context.moveTo(x1, y1);
+						context.lineTo(x2, y2);
+						context.stroke();
+					}
+					function clear(){
+						el.getContext('2d').clearRect(0,0,el.width, el.height); 
+					}
+					$(el).on("mousedown", function(e) {
+						console.log("mousedown");
+						e.preventDefault();
+						var context = el.getContext('2d');
+						var offset = $(el).offset();
+						var left = e.pageX - offset.left;
+						var top = e.pageY - offset.top;
+						$(el).on("mousemove", function(e2){
+							console.log("mousemove");
+							var left2 = e2.pageX - offset.left;
+							var top2 = e2.pageY - offset.top;
+							draw(left, top, left2, top2);
+							socket.emit('line', {x1:left,y1:top,x2:left2,y2:top2}); 
+							left = left2;
+							top = top2;
+						});
+						
+					}).on("mouseup", function(e) {
+						console.log("mouseup");
+						$(this).off("mousemove");
+					}).on("contextmenu", function(e) {
+						e.preventDefault();
+						socket.emit('clear');
+						clear();
+					});
+
+					socket.on('line', function(line) {
+						draw(line.x1, line.y1, line.x2, line.y2);
+					});
+					socket.on('clear', function(){
+						clear();
+					});
+				}
+			}
 			function ViewModel(){
 				var vm = this;
-				var socket = io();
+				var socket = this.socket = io();
 
 				this.text = ko.observable();
 				this.items = ko.observableArray([]);
