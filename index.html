@@ -25,7 +25,7 @@
 				<button class="postfix" data-bind="click: pushItem">+</button>
 			</div>
 			<div class="medium-5 medium-centered columns panel">
-				<canvas id="whiteboard" width="640" height="480" data-bind="whiteboard: socket"></canvas>
+				<canvas id="whiteboard" width="480" height="480" data-bind="whiteboard: socket"></canvas>
 			</div>
 		</div>
 		
@@ -36,9 +36,13 @@
 			ko.bindingHandlers.whiteboard = {
 				init: function(el, valueAccessor) {
 					var socket = valueAccessor();
+					var color = "#" + [1,1,1].map(function(){ 
+						return Math.floor(Math.random() * (255)).toString(16); 
+					}).join("");
 
-					function draw(x1, y1, x2, y2) {
+					function draw(x1, y1, x2, y2, color) {
 						var context = el.getContext('2d');
+						context.strokeStyle = color;
 						context.beginPath();
 						context.moveTo(x1, y1);
 						context.lineTo(x2, y2);
@@ -58,8 +62,8 @@
 							console.log("mousemove");
 							var left2 = e2.pageX - offset.left;
 							var top2 = e2.pageY - offset.top;
-							draw(left, top, left2, top2);
-							socket.emit('line', {x1:left,y1:top,x2:left2,y2:top2}); 
+							draw(left, top, left2, top2, color);
+							socket.emit('line', {x1:left,y1:top,x2:left2,y2:top2, color:color}); 
 							left = left2;
 							top = top2;
 						});
@@ -71,10 +75,10 @@
 						e.preventDefault();
 						socket.emit('clear');
 						clear();
-					});
+					}).css("outline", "1px solid " + color);
 
 					socket.on('line', function(line) {
-						draw(line.x1, line.y1, line.x2, line.y2);
+						draw(line.x1, line.y1, line.x2, line.y2, line.color);
 					});
 					socket.on('clear', function(){
 						clear();
